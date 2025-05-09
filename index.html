@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Game Sales Tree Map</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    #title {
+      font-size: 2em;
+      margin-bottom: 0.2em;
+    }
+    #description {
+      font-size: 1.2em;
+      margin-bottom: 1em;
+    }
+    .tile {
+      stroke: #fff;
+      stroke-width: 0.5;
+    }
+    .legend-item {
+      stroke: #000;
+      stroke-width: 0.5;
+    }
+    #tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.75);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      pointer-events: none;
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="title">Video Game Sales</h1>
+  <p id="description">Top 100 Most Sold Video Games Grouped by Platform</p>
+  <div id="tooltip"></div>
+  <svg width="960" height="600"></svg>
+  <svg id="legend" width="500" height="100"></svg>
+
+  <script>
+    const URL = 'https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/video-game-sales-data.json';
+    const svg = d3.select('svg');
+    const tooltip = d3.select('#tooltip');
+    const width = +svg.attr('width');
+    const height = +svg.attr('height');
+    const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    d3.json(URL).then(data => {
+      const root = d3.treemap()
+        .size([width, height])
+        .paddingInner(1)
+        (
+          d3.hierarchy(data)
+            .sum(d => d.value)
+            .sort((a, b) => b.value - a.value)
+        );
+
+      const tile = svg.selectAll('g')
+        .data(root.leaves())
+        .enter()
+        .append('g')
+        .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+      tile.append('rect')
+        .attr('class', 'tile')
+        .attr('data-name', d => d.data.name)
+        .attr('data-category', d => d.data.category)
+        .attr('data-value', d => d.data.value)
+        .attr('width', d => d.x1 - d.x0)
+        .attr('height', d => d.y1 - d.y0)
+        .attr('fill', d => color(d.data.category))
+        .on('mousemove', function(event, d) {
+          tooltip
+            .style('visibility', 'visible')
+            .style('left', event.pageX + 10 + 'px')
+            .style('top', event.pageY - 20 + 'px')
+            .attr('data-value', d.data.value)
+            .html(
+              `Name: ${d.data.name}<br>Category: ${d.data.category}<br>Value: ${d.data.value}`
+            );
+        })
+        .on('mouseout', () => tooltip.style('visibility', 'hidden'));
+
+      tile.append('text')
+        .selectAll('tspan')
+        .data(d => d.data.name.split(/\s+/g))
+        .enter()
+        .append('tspan')
+        .attr('x', 4)
+        .attr('y', (d, i) => 15 + i * 12)
+        .text(d => d);
+
+      const categories = [...new Set(root.leaves().map(d => d.data.category))];
+
+      const legend = d3.select('#legend');
+      const legendItemSize = 20;
+
+      const legendGroup = legend.selectAll('g')
+        .data(categories)
+        .enter()
+        .append('g')
+        .attr('transform', (d, i) => `translate(${i * 110}, 0)`);
+
+      legendGroup.append('rect')
+        .attr('class', 'legend-item')
+        .attr('width', legendItemSize)
+        .attr('height', legendItemSize)
+        .attr('fill', d => color(d));
+
+      legendGroup.append('text')
+        .attr('x', legendItemSize + 5)
+        .attr('y', legendItemSize / 1.5)
+        .text(d => d);
+    });
+  </script>
+</body>
+</html>
